@@ -9,29 +9,32 @@ import numpy as np
 import torch
 
 import warnings
+
 warnings.filterwarnings('ignore')
 
-
 """Long range dataloader"""
+
+
 class Dataset_ETT_hour(Dataset):
-    def __init__(self, root_path, flag='train', size=None, data_path='ETTh1.csv', dataset='ETTh1', inverse=False):
+    def __init__(self, root_path, flag='train', size=None, data_path='ETTh1.csv', dataset='ETTh1', inverse=False, univariate=False):
         # size [seq_len, label_len, pred_len]
         # info
         if size == None:
-            self.seq_len = 24*4*4
-            self.pred_len = 24*4
+            self.seq_len = 24 * 4 * 4
+            self.pred_len = 24 * 4
         else:
             self.seq_len = size[0]
             self.pred_len = size[1]
         # init
         assert flag in ['train', 'test', 'val']
-        type_map = {'train':0, 'val':1, 'test':2}
+        type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]
 
         self.inverse = inverse
 
         self.root_path = root_path
         self.data_path = data_path
+        self.univariate = univariate
         self.__read_data__()
 
     def __read_data__(self):
@@ -39,13 +42,16 @@ class Dataset_ETT_hour(Dataset):
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
 
-        border1s = [0, 12*30*24 - self.seq_len, 12*30*24+4*30*24 - self.seq_len]
-        border2s = [12*30*24, 12*30*24+4*30*24, 12*30*24+8*30*24]
+        border1s = [0, 12 * 30 * 24 - self.seq_len, 12 * 30 * 24 + 4 * 30 * 24 - self.seq_len]
+        border2s = [12 * 30 * 24, 12 * 30 * 24 + 4 * 30 * 24, 12 * 30 * 24 + 8 * 30 * 24]
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
 
-        cols_data = df_raw.columns[1:]
-        df_data = df_raw[cols_data]
+        if self.univariate:
+            df_data = df_raw[['OT']]
+        else:
+            cols_data = df_raw.columns[1:]
+            df_data = df_raw[cols_data]
 
         train_data = df_data[border1s[0]:border2s[0]]
         self.scaler.fit(train_data.values)
@@ -74,9 +80,9 @@ class Dataset_ETT_hour(Dataset):
         seq_y_mark = self.data_stamp[r_begin:r_end]
 
         return seq_x, seq_y, seq_x_mark, seq_y_mark, self.scaler.mean, self.scaler.std
-    
+
     def __len__(self):
-        return len(self.data_x) - self.seq_len- self.pred_len + 1
+        return len(self.data_x) - self.seq_len - self.pred_len + 1
 
     def inverse_transform(self, data, seq_y, mean, std):
         return self.scaler.inverse_transform(data), seq_y
@@ -87,14 +93,14 @@ class Dataset_ETT_minute(Dataset):
         # size [seq_len, label_len, pred_len]
         # info
         if size == None:
-            self.seq_len = 24*4*4
-            self.pred_len = 24*4
+            self.seq_len = 24 * 4 * 4
+            self.pred_len = 24 * 4
         else:
             self.seq_len = size[0]
             self.pred_len = size[1]
         # init
         assert flag in ['train', 'test', 'val']
-        type_map = {'train':0, 'val':1, 'test':2}
+        type_map = {'train': 0, 'val': 1, 'test': 2}
         self.set_type = type_map[flag]
 
         self.inverse = inverse
@@ -108,11 +114,11 @@ class Dataset_ETT_minute(Dataset):
         df_raw = pd.read_csv(os.path.join(self.root_path,
                                           self.data_path))
 
-        border1s = [0, 12*30*24*4 - self.seq_len, 12*30*24*4+4*30*24*4 - self.seq_len]
-        border2s = [12*30*24*4, 12*30*24*4+4*30*24*4, 12*30*24*4+8*30*24*4]
+        border1s = [0, 12 * 30 * 24 * 4 - self.seq_len, 12 * 30 * 24 * 4 + 4 * 30 * 24 * 4 - self.seq_len]
+        border2s = [12 * 30 * 24 * 4, 12 * 30 * 24 * 4 + 4 * 30 * 24 * 4, 12 * 30 * 24 * 4 + 8 * 30 * 24 * 4]
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
-        
+
         cols_data = df_raw.columns[1:]
         df_data = df_raw[cols_data]
 
@@ -123,14 +129,14 @@ class Dataset_ETT_minute(Dataset):
         df_stamp = df_raw[['date']][border1:border2]
         df_stamp['date'] = pd.to_datetime(df_stamp.date)
         data_stamp = time_features(df_stamp, timeenc=1, freq='h')
-        
+
         self.data_x = data[border1:border2]
         if self.inverse:
             self.data_y = df_data.values[border1:border2]
         else:
             self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
-    
+
     def __getitem__(self, index):
         s_begin = index
         s_end = s_begin + self.seq_len
@@ -143,18 +149,20 @@ class Dataset_ETT_minute(Dataset):
         seq_y_mark = self.data_stamp[r_begin:r_end]
 
         return seq_x, seq_y, seq_x_mark, seq_y_mark, self.scaler.mean, self.scaler.std
-    
+
     def __len__(self):
-        return len(self.data_x) - self.seq_len- self.pred_len + 1
+        return len(self.data_x) - self.seq_len - self.pred_len + 1
 
     def inverse_transform(self, data, seq_y, mean, std):
         return self.scaler.inverse_transform(data), seq_y
 
 
 """Long range dataloader for dataset elect and app flow"""
+
+
 class Dataset_Custom(Dataset):
-    def __init__(self, root_path, flag='train', size=None, data_path='ETTh1.csv', dataset='elect', 
-                inverse=False):
+    def __init__(self, root_path, flag='train', size=None, data_path='ETTh1.csv', dataset='elect',
+                 inverse=False):
         # size [seq_len, label_len, pred_len]
         # info
         self.seq_len = size[0]
@@ -167,7 +175,7 @@ class Dataset_Custom(Dataset):
         self.root_path = root_path
         self.data_path = data_path
         preprocess_path = os.path.join(self.root_path, self.data_path)
-        self.all_data, self.covariates, self.train_end = eval('preprocess_'+dataset)(preprocess_path)
+        self.all_data, self.covariates, self.train_end = eval('preprocess_' + dataset)(preprocess_path)
         self.all_data = torch.from_numpy(self.all_data).transpose(0, 1)
         self.covariates = torch.from_numpy(self.covariates)
         self.test_start = self.train_end - self.seq_len + 1
@@ -180,7 +188,7 @@ class Dataset_Custom(Dataset):
         return mean, std
 
     def inverse_transform(self, output, seq_y, mean, std):
-        output = output *  (mean.unsqueeze(1).unsqueeze(1) + 1)
+        output = output * (mean.unsqueeze(1).unsqueeze(1) + 1)
         seq_y = seq_y * (mean.unsqueeze(1).unsqueeze(1) + 1)
         return output, seq_y
 
@@ -189,7 +197,8 @@ class Dataset_Custom(Dataset):
             self.window_per_seq = (self.train_end - self.seq_len - self.pred_len) // self.window_stride
             return self.window_per_seq * self.seq_num
         else:
-            self.window_per_seq = (self.all_data.size(1) - self.test_start - self.seq_len - self.pred_len) // self.window_stride
+            self.window_per_seq = (self.all_data.size(
+                1) - self.test_start - self.seq_len - self.pred_len) // self.window_stride
             return self.window_per_seq * self.seq_num
 
     def __getitem__(self, index):
@@ -227,8 +236,11 @@ class Dataset_Custom(Dataset):
 
 
 """Long range dataloader for synthetic dataset"""
+
+
 class Dataset_Synthetic(Dataset):
-    def __init__(self, root_path, flag='train', size=None, data_path='synthetic.npy', dataset='synthetic', inverse=False):
+    def __init__(self, root_path, flag='train', size=None, data_path='synthetic.npy', dataset='synthetic',
+                 inverse=False):
         # size [seq_len, label_len, pred_len]
         # info
         self.seq_len = size[0]
@@ -241,7 +253,7 @@ class Dataset_Synthetic(Dataset):
         self.root_path = root_path
         self.data_path = data_path
         preprocess_path = os.path.join(self.root_path, self.data_path)
-        self.all_data =np.load(preprocess_path)
+        self.all_data = np.load(preprocess_path)
         self.all_data = torch.from_numpy(self.all_data)
         self.all_data, self.covariates = self.all_data[:, :, 0], self.all_data[:, :, 1:]
         self.seq_num = self.all_data.size(0)
@@ -257,7 +269,7 @@ class Dataset_Synthetic(Dataset):
         return mean, std
 
     def inverse_transform(self, output, seq_y, mean, std):
-        output = output *  (mean.unsqueeze(1).unsqueeze(1) + 1)
+        output = output * (mean.unsqueeze(1).unsqueeze(1) + 1)
         seq_y = seq_y * (mean.unsqueeze(1).unsqueeze(1) + 1)
         return output, seq_y
 
@@ -266,7 +278,8 @@ class Dataset_Synthetic(Dataset):
             self.window_per_seq = (self.train_end - self.seq_len - self.pred_len) // self.window_stride
             return self.window_per_seq * self.seq_num
         else:
-            self.window_per_seq = (self.all_data.size(1) - self.test_start - self.seq_len - self.pred_len) // self.window_stride
+            self.window_per_seq = (self.all_data.size(
+                1) - self.test_start - self.seq_len - self.pred_len) // self.window_stride
             return self.window_per_seq * self.seq_num
 
     def __getitem__(self, index):
@@ -341,12 +354,12 @@ def preprocess_elect(csv_path):
     test_end = '2014-09-07 23:00:00'
 
     data_frame = pd.read_csv(csv_path, sep=";", index_col=0, parse_dates=True, decimal=',')
-    data_frame = data_frame.resample('1H',label = 'left',closed = 'right').sum()[train_start:test_end]
+    data_frame = data_frame.resample('1H', label='left', closed='right').sum()[train_start:test_end]
     data_frame.fillna(0, inplace=True)
 
     covariates = gen_covariates(data_frame[train_start:test_end].index, num_covariates)
     all_data = data_frame[train_start:test_end].values
-    data_start = (all_data!=0).argmax(axis=0) #find first nonzero value in each time series
+    data_start = (all_data != 0).argmax(axis=0)  # find first nonzero value in each time series
     train_end = len(data_frame[train_start:train_end].values)
 
     all_data = all_data[:, data_start < 10000]
@@ -381,7 +394,7 @@ def preprocess_flow(csv_path):
 
         all_data.append(temp_data)
 
-    all_data = np.array([data[len(data)-min_length:, :] for data in all_data]).transpose(1, 0, 2).astype(np.float32)
+    all_data = np.array([data[len(data) - min_length:, :] for data in all_data]).transpose(1, 0, 2).astype(np.float32)
     train_end = min(int(0.8 * min_length), min_length - 1000)
     covariates = all_data.copy()
     covariates[:, :, :-1] = covariates[:, :, 1:]
@@ -390,31 +403,35 @@ def preprocess_flow(csv_path):
 
 
 """Single step dataloader"""
+
+
 def split(split_start, label, cov, pred_length):
     all_data = []
     for batch_idx in range(len(label)):
         batch_label = label[batch_idx]
         for i in range(pred_length):
-            single_data = batch_label[i:(split_start+i)].clone().unsqueeze(1)
+            single_data = batch_label[i:(split_start + i)].clone().unsqueeze(1)
             single_data[-1] = -1
-            single_cov = cov[batch_idx, i:(split_start+i), :].clone()
+            single_cov = cov[batch_idx, i:(split_start + i), :].clone()
             temp_data = [single_data, single_cov]
             single_data = torch.cat(temp_data, dim=1)
             all_data.append(single_data)
     data = torch.stack(all_data, dim=0)
-    label = label[:, -pred_length:].reshape(pred_length*len(label))
+    label = label[:, -pred_length:].reshape(pred_length * len(label))
 
     return data, label
 
 
 """Single step training dataloader for the electricity dataset"""
+
+
 class electTrainDataset(Dataset):
     def __init__(self, data_path, data_name, predict_length, batch_size):
         self.data = torch.from_numpy(np.load(os.path.join(data_path, f'train_data_{data_name}.npy')))
 
         # Resample windows according to the average amplitude
         v = np.load(os.path.join(data_path, f'train_v_{data_name}.npy'))
-        weights = torch.as_tensor(np.abs(v[:,0])/np.sum(np.abs(v[:,0])), dtype=torch.double)
+        weights = torch.as_tensor(np.abs(v[:, 0]) / np.sum(np.abs(v[:, 0])), dtype=torch.double)
         num_samples = weights.size(0)
         sample_index = torch.multinomial(weights, num_samples, True)
         self.data = self.data[sample_index]
@@ -430,12 +447,12 @@ class electTrainDataset(Dataset):
         return self.train_len
 
     def __getitem__(self, index):
-        if (index+1) <= self.train_len:
-            all_data = self.data[index*self.batch_size:(index+1)*self.batch_size].clone()
-            label = self.label[index*self.batch_size:(index+1)*self.batch_size].clone()
+        if (index + 1) <= self.train_len:
+            all_data = self.data[index * self.batch_size:(index + 1) * self.batch_size].clone()
+            label = self.label[index * self.batch_size:(index + 1) * self.batch_size].clone()
         else:
-            all_data = self.data[index*self.batch_size:].clone()
-            label = self.label[index*self.batch_size:].clone()
+            all_data = self.data[index * self.batch_size:].clone()
+            label = self.label[index * self.batch_size:].clone()
 
         cov = all_data[:, :, 2:]
 
@@ -446,6 +463,8 @@ class electTrainDataset(Dataset):
 
 
 """Single step testing dataloader for the electricity dataset"""
+
+
 class electTestDataset(Dataset):
     def __init__(self, data_path, data_name, predict_length):
         self.data = np.load(os.path.join(data_path, f'test_data_{data_name}.npy'))
@@ -470,9 +489,9 @@ class electTestDataset(Dataset):
         split_start = len(label) - self.pred_length + 1
         all_data = []
         for i in range(self.pred_length):
-            single_data = data[i:(split_start+i)].clone().unsqueeze(1)
+            single_data = data[i:(split_start + i)].clone().unsqueeze(1)
             single_data[-1] = -1
-            single_cov = cov[i:(split_start+i), :].clone()
+            single_cov = cov[i:(split_start + i), :].clone()
             single_data = torch.cat([single_data, single_cov], dim=1)
             all_data.append(single_data)
         all_data = torch.stack(all_data, dim=0)
@@ -482,13 +501,15 @@ class electTestDataset(Dataset):
 
 
 """Single step training dataloader for the app flow dataset"""
+
+
 class flowTrainDataset(Dataset):
     def __init__(self, data_path, data_name, predict_length, batch_size):
         self.data = torch.from_numpy(np.load(os.path.join(data_path, f'train_data_{data_name}.npy')))
 
         # Resample windows according to the average amplitude
         v = np.load(os.path.join(data_path, f'train_v_{data_name}.npy'))
-        weights = torch.as_tensor(np.abs(v)/np.sum(np.abs(v)), dtype=torch.double)
+        weights = torch.as_tensor(np.abs(v) / np.sum(np.abs(v)), dtype=torch.double)
         num_samples = weights.size(0)
         sample_index = torch.multinomial(weights, num_samples, True)
         self.data = self.data[sample_index]
@@ -503,12 +524,12 @@ class flowTrainDataset(Dataset):
         return self.train_len
 
     def __getitem__(self, index):
-        if (index+1) <= self.train_len:
-            all_data = self.data[index*self.batch_size:(index+1)*self.batch_size].clone()
-            label = self.label[index*self.batch_size:(index+1)*self.batch_size].clone()
+        if (index + 1) <= self.train_len:
+            all_data = self.data[index * self.batch_size:(index + 1) * self.batch_size].clone()
+            label = self.label[index * self.batch_size:(index + 1) * self.batch_size].clone()
         else:
-            all_data = self.data[index*self.batch_size:].clone()
-            label = self.label[index*self.batch_size:].clone()
+            all_data = self.data[index * self.batch_size:].clone()
+            label = self.label[index * self.batch_size:].clone()
 
         cov = all_data[:, :, 1:]
 
@@ -519,6 +540,8 @@ class flowTrainDataset(Dataset):
 
 
 """Single step testing dataloader for the all flow dataset"""
+
+
 class flowTestDataset(Dataset):
     def __init__(self, data_path, data_name, predict_length):
         self.data = np.load(os.path.join(data_path, f'test_data_{data_name}.npy'))
@@ -540,9 +563,9 @@ class flowTestDataset(Dataset):
         split_start = len(label) - self.pred_length + 1
         all_data = []
         for i in range(self.pred_length):
-            single_data = data[i:(split_start+i)].clone().unsqueeze(1)
+            single_data = data[i:(split_start + i)].clone().unsqueeze(1)
             single_data[-1] = -1
-            single_cov = cov[i:(split_start+i), :].clone()
+            single_cov = cov[i:(split_start + i), :].clone()
             single_data = torch.cat([single_data, single_cov], dim=1)
             all_data.append(single_data)
         all_data = torch.stack(all_data, dim=0)
@@ -552,13 +575,15 @@ class flowTestDataset(Dataset):
 
 
 """Single step training dataloader for the wind dataset"""
+
+
 class windTrainDataset(Dataset):
     def __init__(self, data_path, data_name, predict_length, batch_size):
         self.data = torch.from_numpy(np.load(os.path.join(data_path, f'train_data_{data_name}.npy')))
 
         # Resample windows according to the average amplitude
         v = np.load(os.path.join(data_path, f'train_v_{data_name}.npy'))
-        weights = torch.as_tensor(np.abs(v)/np.sum(np.abs(v)), dtype=torch.double)
+        weights = torch.as_tensor(np.abs(v) / np.sum(np.abs(v)), dtype=torch.double)
         num_samples = weights.size(0)
         sample_index = torch.multinomial(weights, num_samples, True)
         self.data = self.data[sample_index]
@@ -571,10 +596,10 @@ class windTrainDataset(Dataset):
         return self.train_len
 
     def __getitem__(self, index):
-        if (index+1) <= self.train_len:
-            all_data = self.data[index*self.batch_size:(index+1)*self.batch_size].clone()
+        if (index + 1) <= self.train_len:
+            all_data = self.data[index * self.batch_size:(index + 1) * self.batch_size].clone()
         else:
-            all_data = self.data[index*self.batch_size:].clone()
+            all_data = self.data[index * self.batch_size:].clone()
 
         cov = all_data[:, :, 1:]
         label = all_data[:, :, 0]
@@ -586,6 +611,8 @@ class windTrainDataset(Dataset):
 
 
 """Single step testing dataloader for the wind dataset"""
+
+
 class windTestDataset(Dataset):
     def __init__(self, data_path, data_name, predict_length):
         self.data = np.load(os.path.join(data_path, f'test_data_{data_name}.npy'))
@@ -606,13 +633,12 @@ class windTestDataset(Dataset):
         split_start = len(label) - self.pred_length + 1
         all_data = []
         for i in range(self.pred_length):
-            single_data = data[i:(split_start+i)].clone().unsqueeze(1)
+            single_data = data[i:(split_start + i)].clone().unsqueeze(1)
             single_data[-1] = -1
-            single_cov = cov[i:(split_start+i), :].clone()
+            single_cov = cov[i:(split_start + i), :].clone()
             single_data = torch.cat([single_data, single_cov], dim=1)
             all_data.append(single_data)
         all_data = torch.stack(all_data, dim=0)
         label = label[-self.pred_length:]
 
         return all_data, label, v
-

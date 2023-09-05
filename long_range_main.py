@@ -33,7 +33,8 @@ def prepare_dataloader(args):
         flag='train',
         size=[args.input_size, args.predict_step],
         inverse=args.inverse,
-        dataset=args.data
+        dataset=args.data,
+        univariate=args.univariate
     )
     print('train', len(train_set))
     train_loader = DataLoader(
@@ -75,13 +76,21 @@ def sample_mining_scheduler(epoch, batch_size):
     return topk
 
 
-def dataset_parameters(args, dataset):
+def dataset_parameters(args, dataset, univariate=False):
     """Prepare specific parameters for different datasets"""
     dataset2enc_in = {
         'ETTh1':7,
         'ETTh2':7,
         'ETTm1':7,
         'ETTm2':7,
+        'elect':1,
+        'flow': 1,
+        'synthetic': 1
+    } if not univariate else {
+        'ETTh1':1,
+        'ETTh2':1,
+        'ETTm1':1,
+        'ETTm2':1,
         'elect':1,
         'flow': 1,
         'synthetic': 1
@@ -285,6 +294,7 @@ def parse_args():
     parser.add_argument('-data', type=str, default='ETTh1')
     parser.add_argument('-root_path', type=str, default='./data/ETT/', help='root path of the data file')
     parser.add_argument('-data_path', type=str, default='ETTh1.csv', help='data file')
+    parser.add_argument('--univariate', action="store_true", help='settings to use')
 
     # Dataloader parameters.
     parser.add_argument('-input_size', type=int, default=168)
@@ -364,7 +374,7 @@ def main(opt, iter_index):
 
 if __name__ == '__main__':
     opt = parse_args()
-    opt = dataset_parameters(opt, opt.data)
+    opt = dataset_parameters(opt, opt.data, opt.univariate)
     opt.window_size = eval(opt.window_size)
     iter_num = opt.iter_num
     all_perf = []
