@@ -9,6 +9,7 @@ import pyraformer.Pyraformer_LR as Pyraformer
 from tqdm import tqdm
 from data_loader import *
 from utils.tools import TopkMSELoss, metric
+import json
 
 
 def prepare_dataloader(args):
@@ -385,4 +386,8 @@ if __name__ == '__main__':
     all_perf = np.array(all_perf)
     all_perf = all_perf.mean(0)
     print('Average Metrics: {}'.format(all_perf))
+    f = open("result.txt", 'a')
+    f.write(f"{opt.data}_{opt.predict_step} \n")
+    f.write(json.dumps({'mse': str(all_perf[0]), 'mae': str(all_perf[1])}))
+    f.write("\n")
 
