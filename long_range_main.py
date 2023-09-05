@@ -52,7 +52,8 @@ def prepare_dataloader(args):
         flag='test',
         size=[args.input_size, args.predict_step],
         inverse=args.inverse,
-        dataset=args.data
+        dataset=args.data,
+        univariate=args.univariate
     )
     print('test', len(test_set))
     test_loader = DataLoader(
@@ -237,11 +238,11 @@ def train(model, optimizer, scheduler, opt, model_save_dir):
         print('[ Epoch', epoch, ']')
 
         start = time.time()
-        train_mse = train_epoch(model, train_dataset, training_dataloader, optimizer, opt, epoch_i)
-        print('  - (Training) '
-              'MSE: {mse: 8.5f}'
-              'elapse: {elapse:3.3f} min'
-              .format(mse=train_mse, elapse=(time.time() - start) / 60))
+        # train_mse = train_epoch(model, train_dataset, training_dataloader, optimizer, opt, epoch_i)
+        # print('  - (Training) '
+        #       'MSE: {mse: 8.5f}'
+        #       'elapse: {elapse:3.3f} min'
+        #       .format(mse=train_mse, elapse=(time.time() - start) / 60))
 
         mse, mae, rmse, mape, mspe = eval_epoch(model, test_dataset, test_dataloader, opt, epoch_i)
 
