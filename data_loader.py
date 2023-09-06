@@ -166,7 +166,7 @@ class Dataset_ETT_minute(Dataset):
 
 class Dataset_Custom(Dataset):
     def __init__(self, root_path, flag='train', size=None, data_path='ETTh1.csv', dataset='elect',
-                 inverse=False):
+                 inverse=False, univariate=False):
         # size [seq_len, label_len, pred_len]
         # info
         self.seq_len = size[0]
@@ -179,7 +179,7 @@ class Dataset_Custom(Dataset):
         self.root_path = root_path
         self.data_path = data_path
         preprocess_path = os.path.join(self.root_path, self.data_path)
-        self.all_data, self.covariates, self.train_end = eval('preprocess_' + dataset)(preprocess_path)
+        self.all_data, self.covariates, self.train_end = eval('preprocess_' + dataset)(preprocess_path,univariate)
         self.all_data = torch.from_numpy(self.all_data).transpose(0, 1)
         self.covariates = torch.from_numpy(self.covariates)
         self.test_start = self.train_end - self.seq_len + 1
@@ -349,7 +349,7 @@ def gen_covariates(times, num_covariates):
     return covariates
 
 
-def preprocess_elect(csv_path):
+def preprocess_elect(csv_path,univariate=False):
     """preprocess the elect dataset for long range forecasting"""
     num_covariates = 4
     train_start = '2011-01-01 00:00:00'
@@ -362,7 +362,11 @@ def preprocess_elect(csv_path):
     data_frame.fillna(0, inplace=True)
 
     covariates = gen_covariates(data_frame[train_start:test_end].index, num_covariates)
-    all_data = data_frame[train_start:test_end].values
+    all_data = data_frame[train_start:test_end]
+    if univariate:
+        all_data = all_data[['MT_001']].values
+    else:
+        all_data = all_data.values
     data_start = (all_data != 0).argmax(axis=0)  # find first nonzero value in each time series
     train_end = len(data_frame[train_start:train_end].values)
 
