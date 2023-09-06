@@ -5,7 +5,7 @@ python long_range_main.py \
 -data_path LD2011_2014.txt \
 -data elect \
 -input_size 168 \
--predict_step 168 \
+-predict_step $pred_len \
 -n_head 6 \
 -lr 0.00001 \
 -d_model 256 \
