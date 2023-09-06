@@ -89,7 +89,7 @@ class Dataset_ETT_hour(Dataset):
 
 
 class Dataset_ETT_minute(Dataset):
-    def __init__(self, root_path, flag='train', size=None, data_path='ETTm1.csv', dataset='ETTm1', inverse=False):
+    def __init__(self, root_path, flag='train', size=None, data_path='ETTm1.csv', dataset='ETTm1', inverse=False, univariate=False):
         # size [seq_len, label_len, pred_len]
         # info
         if size == None:
@@ -104,6 +104,7 @@ class Dataset_ETT_minute(Dataset):
         self.set_type = type_map[flag]
 
         self.inverse = inverse
+        self.univariate = univariate
 
         self.root_path = root_path
         self.data_path = data_path
@@ -119,8 +120,11 @@ class Dataset_ETT_minute(Dataset):
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
 
-        cols_data = df_raw.columns[1:]
-        df_data = df_raw[cols_data]
+        if self.univariate:
+            df_data = df_raw[['OT']]
+        else:
+            cols_data = df_raw.columns[1:]
+            df_data = df_raw[cols_data]
 
         train_data = df_data[border1s[0]:border2s[0]]
         self.scaler.fit(train_data.values)
