@@ -1,4 +1,4 @@
-for pred_len in 24 48 96 288 672
+for pred_len in 672 #24 48 96 288 672
 do
 python long_range_main.py \
 -data ETTm1 \
