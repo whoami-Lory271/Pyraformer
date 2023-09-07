@@ -114,6 +114,14 @@ def dataset_parameters(args, dataset, univariate=False):
         'elect':321,
         'flow': 1077,
         'synthetic': 60
+    } if not univariate else {
+        'ETTh1': 1,
+        'ETTh2': 1,
+        'ETTm1': 1,
+        'ETTm2': 1,
+        'elect': 1,
+        'flow': 1,
+        'synthetic': 1
     }
     dataset2embed = {
         'ETTh1':'DataEmbedding',
