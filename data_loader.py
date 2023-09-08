@@ -183,7 +183,7 @@ class Dataset_Custom(Dataset):
         self.all_data = torch.from_numpy(self.all_data).transpose(0, 1)
         self.covariates = torch.from_numpy(self.covariates)
         self.test_start = self.train_end - self.seq_len + 1
-        self.window_stride = 24 if not univariate else 1
+        self.window_stride = 24
         self.seq_num = self.all_data.size(0)
 
     def fit(self, data):
