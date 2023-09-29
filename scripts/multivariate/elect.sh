@@ -8,5 +8,6 @@ python long_range_main.py \
 -predict_step $pred_len \
 -n_head 6 \
 -lr 0.00001 \
+-iter_num 1 \
 -d_model 256 \
 done
